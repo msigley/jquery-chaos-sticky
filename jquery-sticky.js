@@ -2,8 +2,10 @@
  * jQuery Chaos Sticky Elements
  * By Matthew Sigley
  * Based on work by Jonathan Davis - http://shopplugin.net
- * Version 0.4.0
+ * Version 1.0.0
  * Recent changes:
+ * - Added document.readyState checks to make sure the window.load event isn't missed (1.0.0)
+ * - Deferred attachement of window.scroll event to window.load (0.5.0)
  * - Added preservation of original top/bottom margin (0.4.0)
  * - Added sticking to bottom of relative element (0.4.0)
  * - Added relative element arguement (0.4.0)
@@ -32,6 +34,8 @@
 									'margin-top' : thisElement.css('margin-top') };
 			
 			//Default Arguement Values
+			if(typeof(args) === 'undefined')
+				 var args = new Array();
 			if(typeof(args['verticalPosition']) === 'undefined') {
 				verticalPosition = 10;
 			} else {
@@ -92,10 +96,10 @@
 					relativeElement = e.data.relativeElement,
 					stickToBottom = e.data.stickToBottom,
 					relativeBottom = relativeElement.offset().top + relativeElement.innerHeight();
-				
 				if (verticalScrollPosition < initialOffset.top-verticalPosition) {
 					//Check for position static so this is not constantly being run on scroll
 					if (moveElement.css('position') != 'static') {
+						if( console ) console.log('returning top stuck element');
 						//Return element to its default state
 						moveElement.not('.sticky-placeholder').css({'position':'static', 'bottom':'', 'top':'', 'left':'', 
 							'margin-top':initialDimensions['margin-top'], 'margin-bottom':initialDimensions['margin-bottom']});
@@ -105,12 +109,14 @@
 				} else if (stickToBottom && (verticalScrollPosition > relativeBottom-verticalPosition-initialDimensions['height'])) {
 					//Check for position fixed so this is not constantly being run on scroll
 					if (moveElement.css('position') != 'absolute') {
+						if( console ) console.log('sticking element to bottom of container');
 						moveElement.not('.sticky-placeholder').css({'position':'absolute', 'bottom':'0', 'top':'', 'left':'',
 							'margin-top':'0', 'margin-bottom':'0'});
 					}
 				} else {
 					//Check for position fixed so this is not constantly being run on scroll
 					if (moveElement.css('position') != 'fixed') {
+						if( console ) console.log('actually sticking element');
 						//Reposition sticky element and insert placeholder directly after it
 						var placeHolder = moveElement.clone();
 						placeHolder.width(initialDimensions.outerWidth);
@@ -126,14 +132,30 @@
 					}
 				}
 			};
-			$(window).on( 'scroll', 
-						{ 'moveElement' : thisElement, 
-							'initialDimensions' : thisDimensions, 
-							'initialOffset' : thisElement.offset(), 
-							'verticalPosition' : verticalPosition,
-							'relativeElement' : relativeElement,
-							'stickToBottom' : stickToBottom }, 
-						moveElementWithScroll );
+			
+			if( document.readyState ) {
+				if( document.readyState == "complete" ) {
+					$(window).on( 'scroll', 
+							{ 'moveElement' : thisElement, 
+								'initialDimensions' : thisDimensions, 
+								'initialOffset' : thisElement.offset(), 
+								'verticalPosition' : verticalPosition,
+								'relativeElement' : relativeElement,
+								'stickToBottom' : stickToBottom }, 
+							moveElementWithScroll );
+				} else {
+					$(window).load( function() {
+						$(window).on( 'scroll', 
+							{ 'moveElement' : thisElement, 
+								'initialDimensions' : thisDimensions, 
+								'initialOffset' : thisElement.offset(), 
+								'verticalPosition' : verticalPosition,
+								'relativeElement' : relativeElement,
+								'stickToBottom' : stickToBottom }, 
+							moveElementWithScroll );
+					});
+				}
+			}
 		return this;
 	};
 })( jQuery );
